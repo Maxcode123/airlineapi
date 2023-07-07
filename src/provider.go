@@ -13,14 +13,23 @@ type AirlineTicketProvider struct {
 
 type Ticket struct{}
 
+type TicketRequest struct {
+	origin      string
+	destination string
+	date        string
+}
+
 func (provider AirlineTicketProvider) GetTickets(
 	departureAirport string, arrivalAirport string) {
 }
 
-func (provider AirlineTicketProvider) _MakeOfferRequest() {
-	data := []byte(`{"data": {"slices": [{"origin": "LHR", "destination": "JFK", "departure_date": "2023-08-08"}], "passengers": [{"type": "adult"}]}}`)
+func (provider AirlineTicketProvider) _MakeOfferRequest(request TicketRequest) {
+	data := []byte(`{"data": {"slices": ` + _CreateSlices(request) + `, "passengers": [{"type": "adult"}]}}`)
 	client := provider._CreateClient()
-	req, err := http.NewRequest("POST", "https://api.duffel.com/air/offer_requests?return_offers=true&supplier_timeout=3000", bytes.NewBuffer(data))
+	req, err := http.NewRequest(
+		"POST",
+		provider.Url+"/air/offer_requests?return_offers=true&supplier_timeout=3000",
+		bytes.NewBuffer(data))
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -30,7 +39,7 @@ func (provider AirlineTicketProvider) _MakeOfferRequest() {
 	req.Header.Add("Accept", "application/json")
 	req.Header.Add("Content-Type", "application/json")
 	req.Header.Add("Duffel-Version", "v1")
-	req.Header.Add("Authorization", "Bearer ")
+	req.Header.Add("Authorization", "Bearer "+Conf.DuffelAPIToken)
 
 	resp, err := client.Do(req)
 	if err != nil {
@@ -49,13 +58,9 @@ func (provider AirlineTicketProvider) _MakeOfferRequest() {
 	fmt.Println(string(body))
 }
 
-func (provider AirlineTicketProvider) _GetOffers(
-	departureAirport string, arrivalAirport string, offerRequestId string) {
+func _CreateSlices(request TicketRequest) string {
+	return `[{"origin": "` + request.origin + `", "destination": "` + request.destination + `", "departure_date": "` + request.date + `"}]`
 }
-
-func (provider AirlineTicketProvider) _MakeRequest(url string) {}
-
-func (provider AirlineTicketProvider) _ParseResponse() {}
 
 func (provider AirlineTicketProvider) _CreateClient() *http.Client {
 	client := &http.Client{}
