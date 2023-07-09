@@ -22,9 +22,9 @@ type Ticket struct {
 }
 
 type TicketRequest struct {
-	origin      string
-	destination string
-	date        string
+	Origin      string `json:"origin"`
+	Destination string `json:"destination"`
+	Date        string `json:"date"`
 }
 
 type operator struct {
@@ -105,12 +105,7 @@ type response struct {
 	} `json:"data"`
 }
 
-func (provider AirlineTicketProvider) GetTickets(
-	departureAirport string, arrivalAirport string, date string) []Ticket {
-	return provider.makeOfferRequest(TicketRequest{departureAirport, arrivalAirport, date})
-}
-
-func (provider AirlineTicketProvider) makeOfferRequest(request TicketRequest) []Ticket {
+func (provider AirlineTicketProvider) GetTickets(request TicketRequest) []Ticket {
 	data := []byte(`{"data": {"slices": ` + createSlices(request) + `, "passengers": [{"type": "adult"}], "cabin_class": "economy"}}`)
 	client := createHttpClient()
 	req, err := http.NewRequest(
@@ -121,11 +116,7 @@ func (provider AirlineTicketProvider) makeOfferRequest(request TicketRequest) []
 		fmt.Println(err)
 	}
 
-	// req.Header.Add("Accept-Encoding", "gzip")
-	req.Header.Add("Accept", "application/json")
-	req.Header.Add("Content-Type", "application/json")
-	req.Header.Add("Duffel-Version", "v1")
-	req.Header.Add("Authorization", "Bearer "+Conf.DuffelAPIToken)
+	addHeaders(req)
 
 	resp, err := client.Do(req)
 	if err != nil {
@@ -142,12 +133,20 @@ func (provider AirlineTicketProvider) makeOfferRequest(request TicketRequest) []
 }
 
 func createSlices(request TicketRequest) string {
-	return `[{"origin": "` + request.origin + `", "destination": "` + request.destination + `", "departure_date": "` + request.date + `"}]`
+	return `[{"origin": "` + request.Origin + `", "destination": "` + request.Destination + `", "departure_date": "` + request.Date + `"}]`
 }
 
 func createHttpClient() *http.Client {
 	client := &http.Client{}
 	return client
+}
+
+func addHeaders(req *http.Request) {
+	// req.Header.Add("Accept-Encoding", "gzip")
+	req.Header.Add("Accept", "application/json")
+	req.Header.Add("Content-Type", "application/json")
+	req.Header.Add("Duffel-Version", "v1")
+	req.Header.Add("Authorization", "Bearer "+Conf.DuffelAPIToken)
 }
 
 func parseResponse(resp *http.Response) response {
