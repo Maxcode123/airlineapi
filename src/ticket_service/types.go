@@ -1,5 +1,13 @@
 package main
 
+type ValidationError struct {
+	msg string
+}
+
+func (err *ValidationError) Error() string {
+	return err.msg
+}
+
 // A Ticket holds the price for a flight along with departure/arrival data.
 type Ticket struct {
 	TotalAmount   float32 `json:"total_amount"`
@@ -14,6 +22,19 @@ type TicketRequest struct {
 	Origin      string `json:"origin"`
 	Destination string `json:"destination"`
 	Date        string `json:"date"`
+}
+
+// TicketRequest constructor
+func NewTicketRequest(
+	origin string, destination string, date string,
+) (TicketRequest, error) {
+	if len(origin) != 3 {
+		return TicketRequest{}, &ValidationError{"invalid origin: " + origin + ". Expected 3-character IATA code"}
+	}
+	if len(destination) != 3 {
+		return TicketRequest{}, &ValidationError{"invalid destination: " + destination + ". Expected 3-character IATA code"}
+	}
+	return TicketRequest{origin, destination, date}, nil
 }
 
 type operator struct {
