@@ -106,10 +106,11 @@ type response struct {
 }
 
 func (provider AirlineTicketProvider) GetTickets(
-	departureAirport string, arrivalAirport string) {
+	departureAirport string, arrivalAirport string, date string) []Ticket {
+	return provider.makeOfferRequest(TicketRequest{departureAirport, arrivalAirport, date})
 }
 
-func (provider AirlineTicketProvider) makeOfferRequest(request TicketRequest) {
+func (provider AirlineTicketProvider) makeOfferRequest(request TicketRequest) []Ticket {
 	data := []byte(`{"data": {"slices": ` + createSlices(request) + `, "passengers": [{"type": "adult"}], "cabin_class": "economy"}}`)
 	client := createHttpClient()
 	req, err := http.NewRequest(
@@ -118,7 +119,6 @@ func (provider AirlineTicketProvider) makeOfferRequest(request TicketRequest) {
 		bytes.NewBuffer(data))
 	if err != nil {
 		fmt.Println(err)
-		return
 	}
 
 	// req.Header.Add("Accept-Encoding", "gzip")
@@ -130,7 +130,6 @@ func (provider AirlineTicketProvider) makeOfferRequest(request TicketRequest) {
 	resp, err := client.Do(req)
 	if err != nil {
 		fmt.Println(err)
-		return
 	}
 
 	defer resp.Body.Close()
@@ -139,7 +138,7 @@ func (provider AirlineTicketProvider) makeOfferRequest(request TicketRequest) {
 	for i := 0; i < len(respObj.Data.Offers); i++ {
 		tickets = append(tickets, parseTicket(respObj.Data.Offers[i]))
 	}
-	PrettyPrint(tickets[50])
+	return tickets
 }
 
 func createSlices(request TicketRequest) string {
