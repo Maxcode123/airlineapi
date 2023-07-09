@@ -1,7 +1,9 @@
 package main
 
 import (
+	"fmt"
 	"net/http"
+	"os"
 
 	"github.com/gin-gonic/gin"
 )
@@ -13,9 +15,14 @@ type TicketResponse struct {
 func getTickets(c *gin.Context) {
 	var req TicketRequest
 	if err := c.BindJSON(&req); err != nil {
-		return
+		fmt.Fprint(os.Stderr, err.Error())
+		c.AbortWithStatus(http.StatusBadRequest)
 	}
-	tickets := GetAirlineTicketProvider().GetTickets(req)
+	tickets, err := GetAirlineTicketProvider().GetTickets(req)
+	if err != nil {
+		fmt.Fprint(os.Stderr, err.Error())
+		c.AbortWithStatus(500)
+	}
 	c.IndentedJSON(http.StatusOK, TicketResponse{tickets})
 }
 

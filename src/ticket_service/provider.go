@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"strconv"
 )
 
@@ -109,7 +110,7 @@ type response struct {
 }
 
 // Fetch all the available Ticket(s) matching the given request.
-func (provider AirlineTicketProvider) GetTickets(request TicketRequest) []Ticket {
+func (provider AirlineTicketProvider) GetTickets(request TicketRequest) ([]Ticket, error) {
 	data := []byte(`{"data": {"slices": ` + createSlices(request) + `, "passengers": [{"type": "adult"}], "cabin_class": "economy"}}`)
 	client := createHttpClient()
 	req, err := http.NewRequest(
@@ -117,14 +118,16 @@ func (provider AirlineTicketProvider) GetTickets(request TicketRequest) []Ticket
 		provider.Url+"/air/offer_requests?return_offers=true&supplier_timeout=3000",
 		bytes.NewBuffer(data))
 	if err != nil {
-		fmt.Println(err)
+		fmt.Fprint(os.Stderr, "failed to create http request object: "+err.Error())
+		return nil, err
 	}
 
 	addHeaders(req)
 
 	resp, err := client.Do(req)
 	if err != nil {
-		fmt.Println(err)
+		fmt.Fprint(os.Stderr, "failed to make http request: "+err.Error())
+		return nil, err
 	}
 
 	defer resp.Body.Close()
@@ -133,7 +136,7 @@ func (provider AirlineTicketProvider) GetTickets(request TicketRequest) []Ticket
 	for i := 0; i < len(respObj.Data.Offers); i++ {
 		tickets = append(tickets, parseTicket(respObj.Data.Offers[i]))
 	}
-	return tickets
+	return tickets, nil
 }
 
 func createSlices(request TicketRequest) string {

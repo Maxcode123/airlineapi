@@ -1,7 +1,7 @@
 package main
 
 import (
-	"fmt"
+	"errors"
 	"os"
 
 	"github.com/joho/godotenv"
@@ -15,14 +15,14 @@ type Config struct {
 }
 
 // Initializes the configuration by reading environment variables.
-func InitConfig() {
-	err := godotenv.Load(".env")
-	if err != nil {
-		fmt.Println("Could not load .env file")
+func InitConfig() error {
+	if err := godotenv.Load(".env"); err != nil {
+		return errors.New("could not load .env file")
 	}
 	Conf.DuffelAPI = os.Getenv("DUFFEL_API")
 	Conf.DuffelAPIToken = os.Getenv("DUFFEL_API_TOKEN")
 	Conf.APIPort = os.Getenv("API_PORT")
+	return nil
 }
 
 // Configuration instance to be used throughout the project.
