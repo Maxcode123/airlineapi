@@ -9,10 +9,12 @@ import (
 	"strconv"
 )
 
+// Provider responsible for fetching airline tickets.
 type AirlineTicketProvider struct {
 	Url string
 }
 
+// A Ticket holds the price for a flight along with departure/arrival data.
 type Ticket struct {
 	TotalAmount   float32 `json:"total_amount"`
 	TotalCurrency string  `json:"total_currency"`
@@ -21,6 +23,7 @@ type Ticket struct {
 	Airline       string  `json:"airline"`
 }
 
+// Data needed to request a Ticket.
 type TicketRequest struct {
 	Origin      string `json:"origin"`
 	Destination string `json:"destination"`
@@ -105,6 +108,7 @@ type response struct {
 	} `json:"data"`
 }
 
+// Fetch all the available Ticket(s) matching the given request.
 func (provider AirlineTicketProvider) GetTickets(request TicketRequest) []Ticket {
 	data := []byte(`{"data": {"slices": ` + createSlices(request) + `, "passengers": [{"type": "adult"}], "cabin_class": "economy"}}`)
 	client := createHttpClient()
