@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strconv"
 )
 
 type AirlineTicketProvider struct {
@@ -26,7 +27,7 @@ type TicketRequest struct {
 	date        string
 }
 
-type Operator struct {
+type operator struct {
 	ConditionsOfCarriageUrl any    `json:"conditions_of_carriage_url"`
 	IataCode                string `json:"iata_code"`
 	Id                      string `json:"id"`
@@ -35,18 +36,18 @@ type Operator struct {
 	Name                    string `json:"name"`
 }
 
-type Segment struct {
+type segment struct {
 	Aircraft                     map[string]any `json:"aircraft"`
 	ArrivingAt                   string         `json:"arriving_at"`
 	DepartingAt                  string         `json:"departing_at"`
 	Destination                  map[string]any `json:"destination"`
 	DestinationTerminal          string         `json:"destination_terminal"`
-	Distance                     float32        `json:"distance"`
+	Distance                     string         `json:"distance"`
 	Duration                     string         `json:"duration"`
 	Id                           string         `json:"id"`
 	MarketingCarrier             map[string]any `json:"marketing_carrier"`
 	MarketingCarrierFlightNumber string         `json:"marketing_carrier_flight_number"`
-	OperatingCarrier             Operator       `json:"operating_carrier"`
+	OperatingCarrier             operator       `json:"operating_carrier"`
 	OperatingCarrierFlightNumber string         `json:"operating_carrier_flight_number"`
 	Origin                       map[string]any `json:"origin"`
 	OriginTerminal               string         `json:"origin_terminal"`
@@ -54,7 +55,7 @@ type Segment struct {
 	Stops                        []any          `json:"stops"`
 }
 
-type Slice struct {
+type slice struct {
 	Conditions      map[string]any `json:"conditions"`
 	Destination     map[string]any `json:"destination"`
 	DestinationType string         `json:"destination_type"`
@@ -63,12 +64,12 @@ type Slice struct {
 	Id              string         `json:"id"`
 	Origin          map[string]any `json:"origin"`
 	OriginType      string         `json:"origin_type"`
-	Segments        []Segment      `json:"segments"`
+	Segments        []segment      `json:"segments"`
 }
 
-type Offer struct {
+type offer struct {
 	AllowedPassengerIdentityDocumentTypes   []string          `json:"allowed_passenger_identity_document_types"`
-	BaseAmount                              float32           `json:"base_amount"`
+	BaseAmount                              string            `json:"base_amount"`
 	BaseCurrency                            string            `json:"base_currency"`
 	Conditions                              map[string]any    `json:"conditions"`
 	CreatedAt                               string            `json:"created_at"`
@@ -81,21 +82,21 @@ type Offer struct {
 	Passengers                              []map[string]any  `json:"passengers"`
 	PaymentRequirements                     map[string]any    `json:"payment_requirements"`
 	PrivateFares                            []any             `json:"private_fares"`
-	Slices                                  []Slice           `json:"slices"`
+	Slices                                  []slice           `json:"slices"`
 	SupportedPassengerIdentityDocumentTypes []string          `json:"suppoerted_passenger_identity_document_types"`
-	TaxAmount                               float32           `json:"tax_amount"`
+	TaxAmount                               string            `json:"tax_amount"`
 	TaxCurrency                             string            `json:"tax_currency"`
-	TotalAmount                             float32           `json:"total_amount"`
+	TotalAmount                             string            `json:"total_amount"`
 	TotalCurrency                           string            `json:"total_currency"`
 	TotalEmissionsKg                        string            `json:"total_emissions_kg"`
 	UpdatedAt                               string            `json:"updated_at"`
 }
 
-type Response struct {
+type response struct {
 	Data struct {
 		Slices     []any   `json:"slices"`
 		Passengers []any   `json:"passengers"`
-		Offers     []Offer `json:"offers"`
+		Offers     []offer `json:"offers"`
 		LiveMode   bool    `json:"live_mode"`
 		Id         string  `json:"id"`
 		CreatedAt  string  `json:"created_at"`
@@ -108,9 +109,9 @@ func (provider AirlineTicketProvider) GetTickets(
 	departureAirport string, arrivalAirport string) {
 }
 
-func (provider AirlineTicketProvider) _MakeOfferRequest(request TicketRequest) {
-	data := []byte(`{"data": {"slices": ` + _CreateSlices(request) + `, "passengers": [{"type": "adult"}], "cabin_class": "economy"}}`)
-	client := _CreateHttpClient()
+func (provider AirlineTicketProvider) makeOfferRequest(request TicketRequest) {
+	data := []byte(`{"data": {"slices": ` + createSlices(request) + `, "passengers": [{"type": "adult"}], "cabin_class": "economy"}}`)
+	client := createHttpClient()
 	req, err := http.NewRequest(
 		"POST",
 		provider.Url+"/air/offer_requests?return_offers=true&supplier_timeout=3000",
@@ -133,45 +134,47 @@ func (provider AirlineTicketProvider) _MakeOfferRequest(request TicketRequest) {
 	}
 
 	defer resp.Body.Close()
-	respObj := _ParseResponse(resp)
+	respObj := parseResponse(resp)
 	var tickets []Ticket
 	for i := 0; i < len(respObj.Data.Offers); i++ {
-		tickets = append(tickets, _ParseTicket(respObj.Data.Offers[i]))
+		tickets = append(tickets, parseTicket(respObj.Data.Offers[i]))
 	}
-	// r, _ := json.Marshal(tickets[0])
-	println(len(tickets))
-
+	PrettyPrint(tickets[50])
 }
 
-func _CreateSlices(request TicketRequest) string {
+func createSlices(request TicketRequest) string {
 	return `[{"origin": "` + request.origin + `", "destination": "` + request.destination + `", "departure_date": "` + request.date + `"}]`
 }
 
-func _CreateHttpClient() *http.Client {
+func createHttpClient() *http.Client {
 	client := &http.Client{}
 	return client
 }
 
-func _ParseResponse(resp *http.Response) Response {
+func parseResponse(resp *http.Response) response {
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		fmt.Println(err)
-		return Response{}
+		return response{}
 	}
-	var result Response
+	var result response
 	if err := json.Unmarshal(body, &result); err != nil {
 		fmt.Println("Cannot unmarshal JSON" + err.Error())
 	}
 	return result
 }
 
-func _ParseTicket(offer Offer) Ticket {
+func parseTicket(offerObj offer) Ticket {
+	f, err := strconv.ParseFloat(offerObj.TotalAmount, 32)
+	if err != nil {
+		fmt.Println(err)
+	}
 	return Ticket{
-		TotalAmount:   float32(offer.TotalAmount),
-		TotalCurrency: offer.TotalCurrency,
-		Departure:     offer.Slices[0].Segments[0].DepartingAt,
-		Arrival:       offer.Slices[0].Segments[0].ArrivingAt,
-		Airline:       offer.Slices[0].Segments[0].OperatingCarrier.Name,
+		TotalAmount:   float32(f),
+		TotalCurrency: offerObj.TotalCurrency,
+		Departure:     offerObj.Slices[0].Segments[0].DepartingAt,
+		Arrival:       offerObj.Slices[0].Segments[0].ArrivingAt,
+		Airline:       offerObj.Slices[0].Segments[0].OperatingCarrier.Name,
 	}
 }
 
