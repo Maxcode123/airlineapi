@@ -9,6 +9,9 @@ from config import config
 
 
 class Ticket(BaseModel):
+    """
+    Ticket response model.
+    """
     total_amount: float
     total_currency: str
     departure: datetime
@@ -21,6 +24,9 @@ class TicketServiceError(Exception):
 
 
 def get_tickets(origin: str, destination: str, date: date) -> list[Ticket]:
+    """
+    Get available tickets from `origin` to `destination` on `date`.
+    """
     res = requests.get(
         url='http://localhost:'  + str(config.api_port) + '/tickets',
         data=json.dumps({'origin': origin, 'destination': destination, 'date': str(date)}),
