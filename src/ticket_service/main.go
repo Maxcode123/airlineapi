@@ -2,5 +2,5 @@ package main
 
 func main() {
 	InitConfig()
-	createEngine().Run("localhost:8000")
+	createEngine().Run("localhost:" + Conf.APIPort)
 }

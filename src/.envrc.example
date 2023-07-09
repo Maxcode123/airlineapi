@@ -1,2 +1,4 @@
 export DUFFEL_API_TOKEN=''
 export DUFFEL_API=''
+export API_PORT=
+export PROXY_PORT=
